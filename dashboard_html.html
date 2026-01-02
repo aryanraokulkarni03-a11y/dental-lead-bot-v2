@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Lead Scraper Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            color: #fff;
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-label {
+            color: #a0a0a0;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .stat-value.success {
+            color: #4ade80;
+        }
+
+        .stat-value.warning {
+            color: #fbbf24;
+        }
+
+        .stat-value.info {
+            color: #60a5fa;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        select, input, button {
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        button {
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            border: none;
+        }
+
+        button.primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        }
+
+        button.success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #fff;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-NOT_CONTACTED {
+            background: rgba(156, 163, 175, 0.3);
+            color: #d1d5db;
+        }
+
+        .status-CALLED {
+            background: rgba(59, 130, 246, 0.3);
+            color: #93c5fd;
+        }
+
+        .status-INTERESTED {
+            background: rgba(251, 191, 36, 0.3);
+            color: #fde68a;
+        }
+
+        .status-TRIAL {
+            background: rgba(168, 85, 247, 0.3);
+            color: #d8b4fe;
+        }
+
+        .status-PAID {
+            background: rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .rating {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #2d2d44;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0a0a0;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-family: inherit;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #a0a0a0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #60a5fa;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🦷 Clinic Lead Scraper</h1>
+            <p class="subtitle">Manage and track dental clinic leads across multiple sources</p>
+        </header>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Clinics</div>
+                <div class="stat-value" id="totalClinics">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Not Contacted</div>
+                <div class="stat-value info" id="notContacted">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Called</div>
+                <div class="stat-value" id="called">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Interested</div>
+                <div class="stat-value warning" id="interested">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Paid</div>
+                <div class="stat-value success" id="paid">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Conversion Rate</div>
+                <div class="stat-value success" id="conversionRate">-</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="filter-group">
+                <select id="filterStatus">
+                    <option value="">All Status</option>
+                    <option value="NOT_CONTACTED">Not Contacted</option>
+                    <option value="CALLED">Called</option>
+                    <option value="INTERESTED">Interested</option>
+                    <option value="TRIAL">Trial</option>
+                    <option value="PAID">Paid</option>
+                </select>
+
+                <select id="filterSource">
+                    <option value="">All Sources</option>
+                    <option value="google_maps">Google Maps</option>
+                    <option value="reddit">Reddit</option>
+                    <option value="quora">Quora</option>
+                    <option value="justdial">JustDial</option>
+                </select>
+
+                <input type="text" id="filterCity" placeholder="Filter by city">
+                <input type="number" id="filterRating" placeholder="Min rating" step="0.1" min="0" max="5">
+
+                <button class="primary" onclick="filterClinics()">🔍 Apply Filters</button>
+                <button class="success" onclick="openScraperModal()">🚀 Start Scraper</button>
+                <button onclick="exportClinics()">📥 Export CSV</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable('clinic_name')">Clinic Name</th>
+                        <th onclick="sortTable('phone')">Phone</th>
+                        <th onclick="sortTable('location')">Location</th>
+                        <th onclick="sortTable('city')">City</th>
+                        <th onclick="sortTable('rating')">Rating</th>
+                        <th onclick="sortTable('source')">Source</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clinicsTable">
+                    <tr>
+                        <td colspan="8" class="loading">
+                            <div class="spinner"></div>
+                            Loading clinics...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Update Clinic Modal -->
+    <div class="modal" id="updateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Update Clinic</h2>
+                <p id="modalClinicName" style="color: #a0a0a0;"></p>
+            </div>
+            <form id="updateForm">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="updateStatus">
+                        <option value="NOT_CONTACTED">Not Contacted</option>
+                        <option value="CALLED">Called</option>
+                        <option value="INTERESTED">Interested</option>
+                        <option value="TRIAL">Trial</option>
+                        <option value="PAID">Paid</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="updateNotes" placeholder="Add notes about this clinic..."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Start Scraper Modal -->
+    <div class="modal" id="scraperModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Start Scraper</h2>
+            </div>
+            <form id="scraperForm">
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="scraperCity" placeholder="e.g., Hyderabad" required>
+                </div>
+                <div class="form-group">
+                    <label>Sources (hold Ctrl to select multiple)</label>
+                    <select id="scraperSources" multiple style="height: 120px;">
+                        <option value="google_maps" selected>Google Maps</option>
+                        <option value="reddit">Reddit</option>
+                        <option value="quora">Quora</option>
+                        <option value="justdial">JustDial</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeScraperModal()">Cancel</button>
+                    <button type="submit" class="success">Start Scraping</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let currentClinicId = null;
+        let clinicsData = [];
+
+        // Load initial data
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/clinics/stats');
+                const data = await response.json();
+
+                if (data.success) {
+                    const stats = data.stats;
+                    document.getElementById('totalClinics').textContent = stats.total_clinics;
+                    document.getElementById('notContacted').textContent = stats.not_contacted;
+                    document.getElementById('called').textContent = stats.called;
+                    document.getElementById('interested').textContent = stats.interested;
+                    document.getElementById('paid').textContent = stats.paid;
+                    document.getElementById('conversionRate').textContent = stats.conversion_rate + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadClinics(filters = {}) {
+            try {
+                let url = '/api/clinics/list?limit=100';
+
+                if (filters.status) url += `&status=${filters.status}`;
+                if (filters.city) url += `&city=${filters.city}`;
+                if (filters.rating_min) url += `&rating_min=${filters.rating_min}`;
+                if (filters.source) url += `&source=${filters.source}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.success) {
+                    clinicsData = data.clinics;
+                    renderClinics(clinicsData);
+                }
+            } catch (error) {
+                console.error('Error loading clinics:', error);
+                showToast('Error loading clinics', 'error');
+            }
+        }
+
+        function renderClinics(clinics) {
+            const tbody = document.getElementById('clinicsTable');
+
+            if (clinics.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #a0a0a0;">No clinics found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = clinics.map(clinic => `
+                <tr>
+                    <td><strong>${clinic.clinic_name}</strong></td>
+                    <td>${clinic.phone || '-'}</td>
+                    <td>${clinic.location || '-'}</td>
+                    <td>${clinic.city}</td>
+                    <td class="rating">${clinic.rating ? '⭐ ' + clinic.rating : '-'}</td>
+                    <td><span class="status-badge status-${clinic.source.toUpperCase()}">${clinic.source}</span></td>
+                    <td><span class="status-badge status-${clinic.status}">${clinic.status.replace('_', ' ')}</span></td>
+                    <td>
+                        <button onclick="openUpdateModal(${clinic.id}, '${clinic.clinic_name}', '${clinic.status}', '${(clinic.notes || '').replace(/'/g, "\\'")}')">
+                            ✏️ Edit
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterClinics() {
+            const filters = {
+                status: document.getElementById('filterStatus').value,
+                source: document.getElementById('filterSource').value,
+                city: document.getElementById('filterCity').value,
+                rating_min: document.getElementById('filterRating').value
+            };
+            loadClinics(filters);
+        }
+
+        function openUpdateModal(clinicId, clinicName, status, notes) {
+            currentClinicId = clinicId;
+            document.getElementById('modalClinicName').textContent = clinicName;
+            document.getElementById('updateStatus').value = status;
+            document.getElementById('updateNotes').value = notes;
+            document.getElementById('updateModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('updateModal').classList.remove('active');
+        }
+
+        function openScraperModal() {
+            document.getElementById('scraperModal').classList.add('active');
+        }
+
+        function closeScraperModal() {
+            document.getElementById('scraperModal').classList.remove('active');
+        }
+
+        document.getElementById('updateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const updateData = {
+                status: document.getElementById('updateStatus').value,
+                notes: document.getElementById('updateNotes').value,
+                call_date: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(`/api/clinics/${currentClinicId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Clinic updated successfully!');
+                    closeModal();
+                    loadClinics();
+                    loadStats();
+                }
+            } catch (error) {
+                console.error('Error updating clinic:', error);
+                showToast('Error updating clinic', 'error');
+            }
+        });
+
+        document.getElementById('scraperForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const city = document.getElementById('scraperCity').value;
+            const sourcesSelect = document.getElementById('scraperSources');
+            const sources = Array.from(sourcesSelect.selectedOptions).map(opt => opt.value);
+
+            if (sources.length === 0) {
+                showToast('Please select at least one source', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/scraper/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ city, sources })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast(`Scraper started! Job ID: ${data.job_id}`);
+                    closeScraperModal();
+
+                    // Poll for updates
+                    pollScraperStatus(data.job_id);
+                }
+            } catch (error) {
+                console.error('Error starting scraper:', error);
+                showToast('Error starting scraper', 'error');
+            }
+        });
+
+        async function pollScraperStatus(jobId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/scraper/status/${jobId}`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(interval);
+                        showToast(`Scraping completed! Found ${data.total_found} clinics`);
+                        loadClinics();
+                        loadStats();
+                    } else if (data.status === 'failed') {
+                        clearInterval(interval);
+                        showToast('Scraping failed: ' + data.error_message, 'error');
+                    }
+                } catch (error) {
+                    clearInterval(interval);
+                }
+            }, 5000);
+        }
+
+        async function exportClinics() {
+            const filters = {
+                status: document.getElementById('filterStatus').value,
+                city: document.getElementById('filterCity').value
+            };
+
+            let url = '/api/clinics/export?format=csv';
+            if (filters.status) url += `&status=${filters.status}`;
+            if (filters.city) url += `&city=${filters.city}`;
+
+            window.location.href = url;
+            showToast('Exporting clinics...');
+        }
+
+        function sortTable(column) {
+            clinicsData.sort((a, b) => {
+                if (a[column] < b[column]) return -1;
+                if (a[column] > b[column]) return 1;
+                return 0;
+            });
+            renderClinics(clinicsData);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 'rgba(16, 185, 129, 0.9)';
+            toast.classList.add('active');
+
+            setTimeout(() => {
+                toast.classList.remove('active');
+            }, 3000);
+        }
+
+        // Close modals on escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeScraperModal();
+            }
+        });
+
+        // Initial load
+        loadStats();
+        loadClinics();
+
+        // Refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+        }, 30000);
+    </script>
+</body>
+</html>

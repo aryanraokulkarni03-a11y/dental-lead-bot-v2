@@ -1050,6 +1050,16 @@ async def startup_event():
     logger.info("📋 Endpoints available at /docs")
 
 
+@app.get("/dashboard")
+async def dashboard():
+    with open("dashboard_html.html", "r") as f:
+        return f.read()
+
+
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
