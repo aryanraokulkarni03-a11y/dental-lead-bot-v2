@@ -4,6 +4,8 @@ FastAPI application for dental and dermatology clinic lead management with AI in
 """
 
 from fastapi import FastAPI, HTTPException, status, Request
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
@@ -1050,13 +1052,11 @@ async def startup_event():
     logger.info("📋 Endpoints available at /docs")
 
 
-@app.get("/dashboard")
+@app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard():
     with open("dashboard_html.html", "r") as f:
         return f.read()
 
-
-from fastapi.staticfiles import StaticFiles
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
