@@ -200,6 +200,7 @@ def verify_ycloud_signature(payload: str, signature_header: str, secret: str) ->
         is_valid = hmac.compare_digest(received_signature, expected_signature)
 
         if not is_valid:
+            logger.error(f"❌ Signature mismatch! Payload: {payload}")
             logger.error(f"❌ Signature mismatch! Expected: {expected_signature}, Got: {received_signature}")
 
         return is_valid
@@ -307,7 +308,7 @@ async def get_ai_response(
 
     try:
         response = await openai_client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o",
             messages=messages,
             temperature=0.7,
             max_tokens=150
