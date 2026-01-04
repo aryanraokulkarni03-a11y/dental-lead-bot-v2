@@ -884,13 +884,13 @@ async def webhook_ycloud(
 # FRONTEND & STARTUP
 # ============================================================================
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
-    """Serve dashboard HTML"""
-    with open("dashboard_html.html", "r") as f:
-        return f.read()
+    @app.get("/dashboard", response_class=HTMLResponse)
+    async def dashboard():
+        """Serve dashboard HTML"""
+        with open("src/static/dashboard_html.html", "r") as f:
+            return f.read()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="src/static"), name="static")
 
 @app.on_event("startup")
 async def startup_event():
