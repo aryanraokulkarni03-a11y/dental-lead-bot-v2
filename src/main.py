@@ -226,7 +226,7 @@ def verify_ycloud_signature(payload: str, signature_header: str,
         is_valid = hmac.compare_digest(received_signature, expected_signature)
 
         if not is_valid:
-            logger.error(f"❌ Signature mismatch!")
+            logger.error(f"❌ Signature mismatch! Payload: {payload}")
             logger.error(
                 f"Expected: {expected_signature}, Got: {received_signature}")
 
@@ -982,19 +982,19 @@ async def webhook_ycloud(request: Request,
 async def dashboard():
     """Serve dashboard HTML"""
     try:
-        with open("static/dashboard_html.html", "r") as f:
+        with open("src/static/dashboard_html.html", "r") as f:
             return f.read()
     except FileNotFoundError:
         logger.error("❌ Dashboard HTML file not found")
         return HTMLResponse(
             content=
-            "<h1>Dashboard not found</h1><p>Please ensure static/dashboard_html.html exists</p>",
+            "<h1>Dashboard not found</h1><p>Please ensure src/static/dashboard_html.html exists</p>",
             status_code=404)
 
 
 # Mount static files
 try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="src/static"), name="static")
 except Exception as e:
     logger.warning(f"⚠️ Could not mount static files directory: {str(e)}")
 
