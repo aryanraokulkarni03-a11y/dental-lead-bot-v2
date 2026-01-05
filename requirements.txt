@@ -3,6 +3,7 @@ uvicorn
 supabase
 python-dotenv
 python-multipart
-openai
 pydantic
 httpx
+google-generativeai
+google-generativeai
