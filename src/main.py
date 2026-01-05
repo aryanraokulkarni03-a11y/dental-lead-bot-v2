@@ -1,6 +1,7 @@
 """
 Medical Clinic Lead Generation SaaS Backend
 FastAPI application with YCloud WhatsApp Integration
+Using Google Gemini for FREE AI responses
 """
 
 from fastapi import FastAPI, HTTPException, status, Request, Header
@@ -18,8 +19,8 @@ import hashlib
 import httpx
 import json
 import uuid
-from openai import AsyncOpenAI
 from supabase import create_client, Client
+import google.generativeai as genai
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -37,10 +38,11 @@ YCLOUD_WEBHOOK_SECRET = os.getenv("YCLOUD_WEBHOOK_SECRET", "")
 YCLOUD_API_BASE = "https://api.ycloud.com/v2"
 
 # Initialize FastAPI
-app = FastAPI(title="Medical Clinic Lead Generation API",
-              description=
-              "SaaS backend for dental and dermatology clinic lead management",
-              version="1.0.0")
+app = FastAPI(
+    title="Medical Clinic Lead Generation API",
+    description=
+    "SaaS backend for dental and dermatology clinic lead management with FREE Gemini AI",
+    version="2.0.0")
 
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL")
@@ -54,17 +56,21 @@ if not supabase_url or not supabase_key:
 
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Initialize OpenAI client
-openai_api_key = os.getenv("OPENAI_API_KEY", "")
-openai_client = AsyncOpenAI(
-    api_key=openai_api_key if openai_api_key else "dummy_key")
+# Initialize Google Gemini AI
+gemini_api_key = os.getenv("GEMINI_API_KEY", "")
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
+    logger.info("🤖 Google Gemini configured successfully")
+else:
+    logger.warning(
+        "⚠️ GEMINI_API_KEY not configured - AI responses will use fallback")
 
 # Log configuration status
 logger.info(f"🔑 YCloud API Key configured: {bool(YCLOUD_API_KEY)}")
 logger.info(
     f"🔐 YCloud Webhook Secret configured: {bool(YCLOUD_WEBHOOK_SECRET)}")
 logger.info(f"🗄️ Supabase configured: {bool(supabase_url and supabase_key)}")
-logger.info(f"🤖 OpenAI API Key configured: {bool(openai_api_key)}")
+logger.info(f"🆓 Gemini AI configured: {bool(gemini_api_key)}")
 
 # ============================================================================
 # ENUMS
@@ -226,7 +232,7 @@ def verify_ycloud_signature(payload: str, signature_header: str,
         is_valid = hmac.compare_digest(received_signature, expected_signature)
 
         if not is_valid:
-            logger.error(f"❌ Signature mismatch! Payload: {payload}")
+            logger.error(f"❌ Signature mismatch!")
             logger.error(
                 f"Expected: {expected_signature}, Got: {received_signature}")
 
@@ -292,7 +298,7 @@ async def send_ycloud_whatsapp_message(to: str,
 
 
 # ============================================================================
-# HELPER FUNCTIONS
+# GOOGLE GEMINI AI INTEGRATION
 # ============================================================================
 
 
@@ -302,42 +308,91 @@ async def get_ai_response(
         treatment_type: str,
         lead_name: str,
         conversation_history: Optional[List[Dict[str, str]]] = None) -> str:
-    """Generate AI response using OpenAI GPT-4"""
+    """
+    Generate AI response using Google Gemini (FREE!)
+
+    Args:
+        industry: "dentistry" or "dermatology"
+        clinic_name: Name of the clinic
+        treatment_type: Type of treatment being discussed
+        lead_name: Patient's name
+        conversation_history: Previous messages in the conversation
+
+    Returns:
+        AI-generated response string
+    """
+
+    # Define personality prompts for each industry
     system_prompts = {
         "dentistry":
-        f"You are Smile Buddy, a friendly dental clinic assistant for {clinic_name}. "
-        f"Help patients with {treatment_type}. Be warm, professional, and encouraging. "
-        f"Keep responses concise (2-3 sentences) and helpful.",
+        f"""You are Smile Buddy, a friendly dental clinic assistant for {clinic_name}.
+You help patients with {treatment_type}. You are warm, professional, and encouraging.
+Keep your responses concise (2-3 sentences) and helpful.
+Always be empathetic and reassuring about dental procedures.""",
         "dermatology":
-        f"You are Luna, an empathetic dermatology clinic assistant for {clinic_name}. "
-        f"Help patients with skin concerns like {treatment_type}. "
-        f"Be professional, caring, and reassuring. Keep responses concise."
+        f"""You are Luna, an empathetic dermatology clinic assistant for {clinic_name}.
+You help patients with skin concerns like {treatment_type}.
+You are professional, caring, and reassuring. Keep responses concise (2-3 sentences).
+Always be sensitive to patients' concerns about their appearance."""
     }
 
     system_prompt = system_prompts.get(industry, system_prompts["dentistry"])
-    messages = [{"role": "system", "content": system_prompt}]
 
+    # Build the full conversation context
+    full_prompt = f"{system_prompt}\n\n"
+
+    # Add conversation history if exists
     if conversation_history:
-        messages.extend(conversation_history)
-
-    # Only add greeting instruction if no conversation history
-    if not conversation_history:
-        messages.append({
-            "role":
-            "user",
-            "content":
-            f"Generate a warm greeting for {lead_name} who is interested in {treatment_type}. "
-            f"Introduce yourself and offer to help."
-        })
+        full_prompt += "Previous conversation:\n"
+        for msg in conversation_history[-10:]:  # Last 10 messages only
+            role = "Patient" if msg["role"] == "user" else "You"
+            content = msg.get("content", "")
+            full_prompt += f"{role}: {content}\n"
+        full_prompt += "\nRespond naturally to continue the conversation. Keep it brief and helpful.\n"
+    else:
+        # First message - greeting
+        full_prompt += f"\nGenerate a warm greeting for {lead_name} who is interested in {treatment_type}.\n"
+        full_prompt += "Introduce yourself and offer to help. Keep it friendly and brief (2-3 sentences).\n"
 
     try:
-        response = await openai_client.chat.completions.create(
-            model="gpt-4o", messages=messages, temperature=0.7, max_tokens=150)
-        return response.choices[0].message.content.strip()
+        if not gemini_api_key:
+            raise Exception("Gemini API key not configured")
+
+        # Use Gemini Pro model (FREE!)
+        model = genai.GenerativeModel('gemini-pro')
+
+        # Configure generation parameters
+        generation_config = {
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": 150,
+        }
+
+        # Generate response
+        response = model.generate_content(full_prompt,
+                                          generation_config=generation_config)
+
+        # Extract text from response
+        ai_message = response.text.strip()
+
+        logger.info(f"🤖 Gemini AI generated response successfully")
+        return ai_message
+
     except Exception as e:
-        logger.error(f"❌ OpenAI API error: {str(e)}")
+        logger.error(f"❌ Gemini API error: {str(e)}")
+
+        # Fallback response if AI fails
         bot_name = "Smile Buddy" if industry == "dentistry" else "Luna"
-        return f"Hi {lead_name}! I'm {bot_name} from {clinic_name}. I'm here to help you with {treatment_type}. How can I assist you today?"
+        fallback_message = f"Hi {lead_name}! I'm {bot_name} from {clinic_name}. I'm here to help you with {treatment_type}. How can I assist you today?"
+
+        logger.info("📝 Using fallback response due to AI error")
+        return fallback_message
+
+
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
 
 
 def calculate_confidence_score(lead_data: Dict[str, Any]) -> float:
@@ -492,7 +547,7 @@ async def process_whatsapp_message(
             "content": msg.get("message", "")
         } for msg in conversation_log[-10:]]
 
-        # Generate AI response
+        # Generate AI response using Gemini
         ai_response = await get_ai_response(
             industry=lead['industry'],
             clinic_name=clinic['clinic_name'],
@@ -565,8 +620,10 @@ async def health_check():
         bool(YCLOUD_API_KEY),
         "supabase_configured":
         bool(supabase_url != "https://placeholder.supabase.co"),
-        "openai_configured":
-        bool(openai_api_key),
+        "gemini_ai_configured":
+        bool(gemini_api_key),
+        "ai_provider":
+        "Google Gemini (FREE)",
         "timestamp":
         datetime.now(timezone.utc).isoformat()
     }
@@ -867,7 +924,7 @@ async def webhook_ycloud(request: Request,
     """
     YCloud WhatsApp webhook endpoint
 
-    Handles incoming WhatsApp messages from YCloud and processes them with AI
+    Handles incoming WhatsApp messages from YCloud and processes them with Gemini AI
     Supports signature verification for security
     """
     try:
@@ -1015,7 +1072,9 @@ async def startup_event():
     logger.info(
         f"🗄️ Supabase configured: {bool(supabase_url != 'https://placeholder.supabase.co')}"
     )
-    logger.info(f"🤖 OpenAI configured: {bool(openai_api_key)}")
+    logger.info(f"🆓 Gemini AI configured: {bool(gemini_api_key)}")
+    logger.info(
+        f"🤖 AI Provider: Google Gemini (FREE - 15 req/min, 1M tokens/day)")
     logger.info("📋 API Documentation available at /docs")
     logger.info("🏥 Health check available at /health")
     logger.info("=" * 60)
