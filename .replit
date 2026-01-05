@@ -39,7 +39,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python src/server.py"
+args = "python src/main.py"
 waitForPort = 8000
 
 [[ports]]
