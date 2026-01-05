@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 YCLOUD_API_KEY = os.getenv("YCLOUD_API_KEY")
 YCLOUD_WEBHOOK_SECRET = os.getenv("YCLOUD_WEBHOOK_SECRET", "")
+YCLOUD_WHATSAPP_NUMBER = os.getenv("YCLOUD_WHATSAPP_NUMBER", "")
 YCLOUD_API_BASE = "https://api.ycloud.com/v2"
 
 # Initialize FastAPI
@@ -268,7 +269,14 @@ async def send_ycloud_whatsapp_message(to: str,
 
     headers = {"Content-Type": "application/json", "X-API-Key": YCLOUD_API_KEY}
 
-    payload = {"to": to, "type": "text", "text": {"body": message}}
+    payload = {
+        "from": YCLOUD_WHATSAPP_NUMBER,  # Use configured number from env
+        "to": to,
+        "type": "text",
+        "text": {
+            "body": message
+        }
+    }
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -358,20 +366,22 @@ Always be sensitive to patients' concerns about their appearance."""
         if not gemini_api_key:
             raise Exception("Gemini API key not configured")
 
-        # Use Gemini Pro model (FREE!)
-        model = genai.GenerativeModel('gemini-pro')
+        # Use Gemini 1.5 Flash model
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
         # Configure generation parameters
-        generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 150,
-        }
+        generation_config = genai.types.GenerationConfig(
+            temperature=0.7,
+            top_p=0.95,
+            top_k=40,
+            max_output_tokens=150,
+        )
 
         # Generate response
-        response = model.generate_content(full_prompt,
-                                          generation_config=generation_config)
+        response = model.generate_content(
+            full_prompt,
+            generation_config=generation_config
+        )
 
         # Extract text from response
         ai_message = response.text.strip()
@@ -1035,25 +1045,21 @@ async def webhook_ycloud(request: Request,
 # ============================================================================
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
-    """Serve dashboard HTML"""
-    try:
-        with open("src/static/dashboard_html.html", "r") as f:
-            return f.read()
-    except FileNotFoundError:
-        logger.error("❌ Dashboard HTML file not found")
-        return HTMLResponse(
-            content=
-            "<h1>Dashboard not found</h1><p>Please ensure src/static/dashboard_html.html exists</p>",
-            status_code=404)
+    @app.get("/dashboard", response_class=HTMLResponse)
+    async def dashboard():
+        """Serve dashboard HTML"""
+        try:
+            with open("src/static/dashboard_html.html", "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            logger.error("❌ Dashboard HTML file not found")
+            return HTMLResponse(
+                content=
+                "<h1>Dashboard not found</h1><p>Please ensure src/static/dashboard_html.html exists</p>",
+                status_code=404)
 
 
-# Mount static files
-try:
     app.mount("/static", StaticFiles(directory="src/static"), name="static")
-except Exception as e:
-    logger.warning(f"⚠️ Could not mount static files directory: {str(e)}")
 
 # ============================================================================
 # STARTUP & SHUTDOWN EVENTS
