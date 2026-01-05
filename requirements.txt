@@ -6,4 +6,3 @@ python-multipart
 pydantic
 httpx
 google-generativeai
-google-generativeai
