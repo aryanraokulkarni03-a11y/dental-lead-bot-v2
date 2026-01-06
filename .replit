@@ -49,4 +49,3 @@ externalPort = 8000
 [userenv]
 
 [userenv.shared]
-ALLOW_UNSAFE_WEBHOOK = "true"
