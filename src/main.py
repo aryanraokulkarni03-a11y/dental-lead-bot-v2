@@ -851,8 +851,18 @@ async def process_whatsapp_message(
 
 
 # ============================================================================
-# API ENDPOINTS - Health & Status
+# API ENDPOINTS - Dashboard
 # ============================================================================
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    """Serve the clinical lead management dashboard"""
+    try:
+        with open("src/static/dashboard_html.html", "r") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        logger.error("❌ Dashboard HTML file not found")
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
