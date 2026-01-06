@@ -173,6 +173,8 @@ class YCloudTextContent(BaseModel):
 
 class YCloudInboundMessage(BaseModel):
     """YCloud inbound message structure"""
+    model_config = {"populate_by_name": True}  # NEW Pydantic V2 syntax
+
     id: str
     wabaId: str
     from_: str = Field(..., alias="from")
@@ -180,9 +182,6 @@ class YCloudInboundMessage(BaseModel):
     type: str
     text: Optional[YCloudTextContent] = None
     timestamp: Optional[str] = None
-
-    class Config:
-        populate_by_name = True
 
 
 class YCloudWebhookEvent(BaseModel):
@@ -299,14 +298,16 @@ async def send_ycloud_whatsapp_message(to: str,
 
     url = f"{YCLOUD_API_BASE}/whatsapp/messages/sendDirectly"
     headers = {"Content-Type": "application/json", "X-API-Key": YCLOUD_API_KEY}
-    payload = {
-        "from": YCLOUD_WHATSAPP_NUMBER,
-        "to": to,
-        "type": "text",
-        "text": {
-            "body": message
-        }
-    }
+
+    # Build payload - only include "from" if configured
+    payload = {"to": to, "type": "text", "text": {"body": message}}
+
+    # Add "from" only if WhatsApp number is configured
+    if YCLOUD_WHATSAPP_NUMBER:
+        payload["from"] = YCLOUD_WHATSAPP_NUMBER
+        logger.info(f"📞 Sending from: {YCLOUD_WHATSAPP_NUMBER}")
+    else:
+        logger.info("📞 Using YCloud's default sender number")
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -382,22 +383,20 @@ Always be sensitive to patients' concerns about their appearance."""
         # Try NEW SDK first (ZERO WARNINGS!)
         if GENAI_VERSION == "new" and isinstance(gemini_client, genai.Client):
             try:
+                # Experimental models often work better in free tier
                 response = gemini_client.models.generate_content(
-                    model='gemini-2.0-flash-exp',  # Try the free experimental 2.0 first
+                    model='gemini-2.0-flash-exp',
                     contents=full_prompt,
                     config=types.GenerateContentConfig(
                         temperature=0.7,
                         max_output_tokens=150,
                     ))
                 ai_message = response.text.strip()
-                logger.info(
-                    f"🤖 Gemini 2.0 Flash (NEW SDK) - Response generated ✅")
+                logger.info(f"🤖 Gemini 2.0 Flash Exp (NEW SDK) - Response generated ✅")
                 return ai_message
             except Exception as e:
-                logger.warning(
-                    f"⚠️ New SDK 2.0 error: {str(e)}, trying 1.5...")
+                logger.warning(f"⚠️ New SDK 2.0 Exp error: {str(e)}, trying stable 1.5...")
                 try:
-                    # Fallback to standard 1.5 flash
                     response = gemini_client.models.generate_content(
                         model='gemini-1.5-flash',
                         contents=full_prompt,
@@ -419,11 +418,11 @@ Always be sensitive to patients' concerns about their appearance."""
                 "top_k": 40,
                 "max_output_tokens": 150,
             }
-            # List of models to try in sequence for old SDK
+            # Experimental models sometimes bypass strict v1beta model check
             models_to_try = [
                 'gemini-1.5-flash',
                 'gemini-1.5-flash-latest',
-                'gemini-1.5-flash-8b',
+                'gemini-1.5-pro',
                 'gemini-2.0-flash-exp'
             ]
             
@@ -433,7 +432,7 @@ Always be sensitive to patients' concerns about their appearance."""
                     response = model.generate_content(
                         full_prompt, generation_config=generation_config)
                     ai_message = response.text.strip()
-                    logger.info(f"🤖 {model_name} (OLD SDK) - Response generated")
+                    logger.info(f"🤖 {model_name} (OLD SDK) - Response generated ✅")
                     return ai_message
                 except Exception as model_e:
                     logger.warning(f"⚠️ Old SDK {model_name} failed: {str(model_e)}")
