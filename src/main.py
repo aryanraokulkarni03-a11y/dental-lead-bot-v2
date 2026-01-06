@@ -6,7 +6,6 @@ Version 6.0 - ZERO ERRORS - 100% ACCURATE - RATE LIMITED
 """
 
 from fastapi import FastAPI, HTTPException, status, Request, Header
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
@@ -851,47 +850,344 @@ async def process_whatsapp_message(
 
 
 # ============================================================================
-# API ENDPOINTS - Dashboard
+# API ENDPOINTS - Health & Status
 # ============================================================================
-@app.get("/dashboard", response_class=HTMLResponse)
-async def get_dashboard():
-    """Serve the clinical lead management dashboard"""
-    try:
-        with open("src/static/dashboard_html.html", "r") as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        logger.error("❌ Dashboard HTML file not found")
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
-        "status":
-        "healthy",
-        "version":
-        "6.0.0",
-        "ycloud_configured":
-        bool(YCLOUD_API_KEY),
-        "ycloud_phone_configured":
-        bool(YCLOUD_WHATSAPP_NUMBER),
-        "supabase_configured":
-        bool(supabase_url != "https://placeholder.supabase.co"),
-        "gemini_ai_configured":
-        bool(gemini_client),
-        "ai_provider":
-        f"Google Gemini {'2.0' if GENAI_VERSION == 'new' else '1.5'} Flash (FREE)"
-        if gemini_client else "Fallback",
-        "sdk_version":
-        GENAI_VERSION or "None",
-        "rate_limiter_enabled":
-        True,
-        "rate_limit":
-        "5 requests/minute",
-        "timestamp":
-        datetime.now(timezone.utc).isoformat()
+        "status": "healthy",
+        "version": "6.0.0",
+        "ycloud_configured": bool(YCLOUD_API_KEY),
+        "ycloud_phone_configured": bool(YCLOUD_WHATSAPP_NUMBER),
+        "supabase_configured": bool(supabase_url != "https://placeholder.supabase.co"),
+        "gemini_ai_configured": bool(gemini_client),
+        "ai_provider": f"Google Gemini {'2.0' if GENAI_VERSION == 'new' else '1.5'} Flash" if gemini_client else "Fallback",
+        "sdk_version": GENAI_VERSION or "None",
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+# ============================================================================
+# API ENDPOINTS - Homepage
+# ============================================================================
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """API Homepage with quick navigation"""
+    return """<!DOCTYPE html>
+<html>
+<head>
+    <title>Medical Clinic Lead Gen API</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        p {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        .links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        a {
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+            font-size: 1em;
+        }
+        a:hover {
+            background: #5568d3;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .badge {
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        .status {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        .emoji {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🏥</div>
+        <h1>Medical Clinic Lead Gen API</h1>
+        <p>AI-Powered WhatsApp Chatbot for Dental & Dermatology Clinics</p>
+
+        <div class="links">
+            <a href="/dashboard">📊 Dashboard</a>
+            <a href="/docs">📚 API Docs</a>
+            <a href="/health">💓 Health Check</a>
+        </div>
+
+        <div class="badge">✅ PRODUCTION READY v6.0</div>
+
+        <div class="status">
+            <h3 style="margin-bottom: 15px; color: #333;">🚀 System Status</h3>
+            <div class="status-item">
+                <span>AI Provider</span>
+                <strong>Google Gemini 2.0</strong>
+            </div>
+            <div class="status-item">
+                <span>Messaging</span>
+                <strong>YCloud WhatsApp API</strong>
+            </div>
+            <div class="status-item">
+                <span>Database</span>
+                <strong>Supabase</strong>
+            </div>
+            <div class="status-item">
+                <span>Framework</span>
+                <strong>FastAPI</strong>
+            </div>
+        </div>
+    </div>
+</body>
+</html>"""
+
+# ============================================================================
+# API ENDPOINTS - Dashboard (MODERN INLINE VERSION)
+# ============================================================================
+@app.get("/dashboard", response_class=HTMLResponse)
+async def get_dashboard():
+    """Real-time lead management dashboard"""
+    try:
+        # Fetch leads from Supabase
+        response = supabase.table("leads").select("*").order("created_at", desc=True).limit(50).execute()
+        leads = response.data if response.data else []
+
+        # Calculate stats
+        total = len(leads)
+        new = len([l for l in leads if l.get('status') == 'new'])
+        contacted = len([l for l in leads if l.get('status') == 'contacted'])
+        qualified = len([l for l in leads if l.get('status') == 'qualified'])
+
+        # Generate table rows
+        rows_html = ""
+        for lead in leads:
+            conf_score = lead.get('confidence_score', 0)
+            conf_class = 'high' if conf_score > 0.7 else 'medium' if conf_score > 0.4 else 'low'
+            status = lead.get('status', 'new')
+
+            rows_html += f"""
+            <tr>
+                <td><strong>{lead.get('name', 'Unknown')}</strong></td>
+                <td>{lead.get('phone', 'N/A')}</td>
+                <td>{lead.get('treatment_type', 'N/A')}</td>
+                <td><span class="status-badge status-{status}">{status}</span></td>
+                <td class="confidence confidence-{conf_class}">{int(conf_score * 100)}%</td>
+                <td>{len(lead.get('conversation_log', []))} msgs</td>
+            </tr>
+            """
+
+        # Choose content: table or empty state
+        content = f"""
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th><th>Phone</th><th>Treatment</th>
+                    <th>Status</th><th>Confidence</th><th>Messages</th>
+                </tr>
+            </thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+        """ if leads else """
+        <div class="empty-state">
+            <div class="empty-icon">📭</div>
+            <h3>No leads yet</h3>
+            <p>Start receiving WhatsApp messages to see leads here!</p>
+        </div>
+        """
+
+        # Return complete HTML
+        return f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Lead Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }}
+        .container {{ max-width: 1400px; margin: 0 auto; }}
+        header {{
+            background: white; padding: 30px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px;
+        }}
+        h1 {{ color: #667eea; font-size: 2.5em; margin-bottom: 10px; }}
+        .subtitle {{ color: #666; font-size: 1.1em; }}
+        .stats {{
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px; margin-bottom: 30px;
+        }}
+        .stat-card {{
+            background: white; padding: 25px; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); text-align: center;
+        }}
+        .stat-number {{ font-size: 3em; font-weight: bold; color: #667eea; }}
+        .stat-label {{ color: #666; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }}
+        .leads-container {{
+            background: white; padding: 30px; border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }}
+        .leads-header {{
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0;
+        }}
+        .leads-header h2 {{ color: #333; font-size: 1.8em; }}
+        .refresh-btn {{
+            background: #667eea; color: white; border: none;
+            padding: 12px 25px; border-radius: 8px; cursor: pointer;
+            font-size: 1em; transition: all 0.3s;
+        }}
+        .refresh-btn:hover {{
+            background: #5568d3; transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }}
+        table {{ width: 100%; border-collapse: collapse; }}
+        th {{
+            background: #f8f9fa; padding: 15px; text-align: left;
+            font-weight: 600; color: #333; border-bottom: 2px solid #e0e0e0;
+        }}
+        td {{ padding: 15px; border-bottom: 1px solid #f0f0f0; color: #555; }}
+        tr:hover {{ background: #f8f9fa; }}
+        .status-badge {{
+            padding: 5px 12px; border-radius: 20px;
+            font-size: 0.85em; font-weight: 600; text-transform: uppercase;
+        }}
+        .status-new {{ background: #e3f2fd; color: #1976d2; }}
+        .status-contacted {{ background: #f3e5f5; color: #7b1fa2; }}
+        .status-qualified {{ background: #e8f5e9; color: #388e3c; }}
+        .confidence {{ font-weight: bold; }}
+        .confidence-high {{ color: #4caf50; }}
+        .confidence-medium {{ color: #ff9800; }}
+        .confidence-low {{ color: #f44336; }}
+        .empty-state {{ text-align: center; padding: 60px 20px; color: #999; }}
+        .empty-icon {{ font-size: 4em; margin-bottom: 20px; }}
+        .footer {{ text-align: center; margin-top: 30px; color: white; opacity: 0.9; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 Lead Dashboard</h1>
+            <p class="subtitle">Real-time Lead Management System</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number">{total}</div>
+                <div class="stat-label">Total Leads</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{new}</div>
+                <div class="stat-label">New</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{contacted}</div>
+                <div class="stat-label">Contacted</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{qualified}</div>
+                <div class="stat-label">Qualified</div>
+            </div>
+        </div>
+
+        <div class="leads-container">
+            <div class="leads-header">
+                <h2>📋 Recent Leads</h2>
+                <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+            </div>
+            {content}
+        </div>
+
+        <div class="footer">
+            <p>💪 Powered by FastAPI + Gemini 2.0 + YCloud + Supabase</p>
+            <p>Version 6.0 | <a href="/docs" style="color: white;">API Docs</a> | <a href="/health" style="color: white;">Health</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh every 30 seconds
+        setTimeout(() => location.reload(), 30000);
+    </script>
+</body>
+</html>"""
+
+    except Exception as e:
+        logger.error(f"❌ Dashboard error: {str(e)}")
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Dashboard Error</title></head>
+        <body style="font-family: sans-serif; padding: 50px; text-align: center;">
+            <h1>❌ Dashboard Error</h1>
+            <p>Could not load dashboard: {str(e)}</p>
+            <p><a href="/health">Check System Health</a> | <a href="/">Home</a></p>
+        </body>
+        </html>
+        """
 
 # ============================================================================
 # API ENDPOINTS - Webhook
