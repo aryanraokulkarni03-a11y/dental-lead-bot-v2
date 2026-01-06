@@ -334,21 +334,40 @@ async def send_ycloud_whatsapp_message(to: str,
         logger.error("❌ YCLOUD_API_KEY not configured!")
         return {"status": "error", "error": "YCloud API key not configured"}
 
+    # Check if phone number is configured
+    if not YCLOUD_WHATSAPP_NUMBER:
+        logger.warning(
+            "⚠️  YCLOUD_WHATSAPP_NUMBER not configured - SKIPPING WhatsApp send"
+        )
+        logger.info(f"📝 Would have sent to {to}: {message[:100]}...")
+        return {
+            "status": "skipped",
+            "reason": "No WhatsApp sender number configured",
+            "message_preview": message[:100],
+            "recipient": to,
+            "note": "Set YCLOUD_WHATSAPP_NUMBER to enable WhatsApp messaging"
+        }
+
     url = f"{YCLOUD_API_BASE}/whatsapp/messages/sendDirectly"
     headers = {"Content-Type": "application/json", "X-API-Key": YCLOUD_API_KEY}
 
-    # Build payload
-    payload = {"to": to, "type": "text", "text": {"body": message}}
+    # Build payload with "from" field (required by YCloud)
+    payload = {
+        "to": to,
+        "type": "text",
+        "text": {
+            "body": message
+        }
+    }
 
     # IMPORTANT: Only include 'from' if YCLOUD_WHATSAPP_NUMBER is set.
-    # If not set, YCloud will use the default number from the account (WABA default).
-    # Providing an empty or incorrect 'from' field will cause a 400 PARAM_MISSING error.
+    # If not set, YCloud will attempt to use the default number.
     if YCLOUD_WHATSAPP_NUMBER and YCLOUD_WHATSAPP_NUMBER.strip():
         payload["from"] = YCLOUD_WHATSAPP_NUMBER
-        logger.info(f"📞 Sending from: {YCLOUD_WHATSAPP_NUMBER}")
+        logger.info(f"📞 Sending from: {YCLOUD_WHATSAPP_NUMBER} to: {to}")
     else:
-        logger.warning(
-            "📞 YCLOUD_WHATSAPP_NUMBER not set - YCloud will attempt to use default number"
+        logger.info(
+            f"📞 YCLOUD_WHATSAPP_NUMBER not set - attempting to send to: {to} via default number"
         )
 
     try:
@@ -372,7 +391,7 @@ async def send_ycloud_whatsapp_message(to: str,
                     f"💡 Solution: Register phone number '{YCLOUD_WHATSAPP_NUMBER}' in YCloud console"
                 )
                 logger.error(
-                    f"💡 Visit: https://www.ycloud.com/console to register your WhatsApp number"
+                    f"💡 Visit: https://www.ycloud.com/console/#/whatsapp/phone-numbers"
                 )
                 return {
                     "status": "failed",
@@ -380,6 +399,22 @@ async def send_ycloud_whatsapp_message(to: str,
                     "status_code": 403,
                     "solution":
                     "Register your WhatsApp number in YCloud console"
+                }
+            elif response.status_code == 400:
+                error_data = response.json() if response.text else {}
+                error_msg = error_data.get("message", "Bad request")
+                logger.error(f"❌ YCloud 400 Error: {error_msg}")
+                logger.error(
+                    f"💡 Check: YCLOUD_WHATSAPP_NUMBER is set correctly")
+                return {
+                    "status":
+                    "failed",
+                    "error":
+                    f"Invalid request: {error_msg}",
+                    "status_code":
+                    400,
+                    "solution":
+                    "Verify your WhatsApp number is registered and formatted correctly"
                 }
             elif response.status_code == 429:
                 logger.error("❌ YCloud rate limit exceeded (429)")
@@ -862,7 +897,8 @@ async def webhook_ycloud(request: Request,
         body_str = raw_body.decode('utf-8')
 
         # Verify webhook signature if secret is configured
-        if YCLOUD_WEBHOOK_SECRET and os.getenv("ALLOW_UNSAFE_WEBHOOK") != "true":
+        if YCLOUD_WEBHOOK_SECRET and os.getenv(
+                "ALLOW_UNSAFE_WEBHOOK") != "true":
             if not ycloud_signature:
                 logger.error("❌ Missing YCloud-Signature header")
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
