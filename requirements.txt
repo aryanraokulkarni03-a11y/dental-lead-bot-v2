@@ -1,14 +1,8 @@
 fastapi
-uvicorn
+uvicorn[standard]
 supabase
 python-dotenv
 python-multipart
 pydantic
 httpx
 google-genai
-fastapi
-google-genai
-httpx
-pydantic
-supabase
-uvicorn[standard]
