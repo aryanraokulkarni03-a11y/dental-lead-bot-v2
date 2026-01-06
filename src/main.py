@@ -340,13 +340,15 @@ async def send_ycloud_whatsapp_message(to: str,
     # Build payload
     payload = {"to": to, "type": "text", "text": {"body": message}}
 
-    # Add "from" only if WhatsApp number is configured
-    if YCLOUD_WHATSAPP_NUMBER:
+    # IMPORTANT: Only include 'from' if YCLOUD_WHATSAPP_NUMBER is set.
+    # If not set, YCloud will use the default number from the account (WABA default).
+    # Providing an empty or incorrect 'from' field will cause a 400 PARAM_MISSING error.
+    if YCLOUD_WHATSAPP_NUMBER and YCLOUD_WHATSAPP_NUMBER.strip():
         payload["from"] = YCLOUD_WHATSAPP_NUMBER
         logger.info(f"📞 Sending from: {YCLOUD_WHATSAPP_NUMBER}")
     else:
         logger.warning(
-            "📞 YCLOUD_WHATSAPP_NUMBER not set - YCloud will use default number"
+            "📞 YCLOUD_WHATSAPP_NUMBER not set - YCloud will attempt to use default number"
         )
 
     try:
